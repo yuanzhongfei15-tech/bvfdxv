@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="免费在线图片裁剪工具 - 自由裁剪图片，精确选择区域。无需注册，移动端完美适配。">
+    <meta name="keywords" content="图片裁剪,在线裁剪,图片剪切,自由裁剪">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://jinqizi.eu.cc/crop.html">
+    <title>免费在线图片裁剪 - 精确选择区域 | 无需注册</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="index.html" class="logo">🖼️ 图片工具站</a>
+                <nav>
+                    <ul>
+                        <li><a href="index.html">首页</a></li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <div class="tool-page">
+                <a href="index.html" class="back-link">← 返回首页</a>
+                <div class="tool-header">
+                    <h1>图片裁剪工具</h1>
+                    <p>自由裁剪图片，精确选择区域</p>
+                </div>
+
+                <div class="upload-area" id="dropZone">
+                    <div class="upload-icon">📤</div>
+                    <p class="upload-text">拖拽图片到这里或点击上传</p>
+                    <input type="file" id="fileInput" class="file-input" accept="image/*">
+                    <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">选择图片</button>
+                </div>
+
+                <div id="cropArea" style="display: none;">
+                    <div style="position: relative; margin-bottom: 1rem;">
+                        <canvas id="cropCanvas" style="max-width: 100%; border: 1px solid var(--border-color);"></canvas>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div>
+                            <label class="control-label">X 坐标</label>
+                            <input type="number" id="cropX" class="control-input" value="0">
+                        </div>
+                        <div>
+                            <label class="control-label">Y 坐标</label>
+                            <input type="number" id="cropY" class="control-input" value="0">
+                        </div>
+                        <div>
+                            <label class="control-label">宽度</label>
+                            <input type="number" id="cropWidth" class="control-input" value="100">
+                        </div>
+                        <div>
+                            <label class="control-label">高度</label>
+                            <input type="number" id="cropHeight" class="control-input" value="100">
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <button class="btn btn-primary" id="previewBtn">预览裁剪</button>
+                        <button class="btn btn-success" id="downloadBtn">下载图片</button>
+                    </div>
+                </div>
+
+                <div class="preview-area" id="previewArea" style="display: none;">
+                    <h3 style="margin-bottom: 1rem;">裁剪预览</h3>
+                    <img id="preview" class="preview-image" alt="预览">
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 图片工具站 - 免费在线图片裁剪工具</p>
+        </div>
+    </footer>
+
+    <script src="js/utils.js"></script>
+    <script>
+        let currentImage = null;
+        let croppedCanvas = null;
+        let cropCanvas = null;
+        let ctx = null;
+        let isDragging = false;
+        let startX, startY;
+
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const cropArea = document.getElementById('cropArea');
+        const previewArea = document.getElementById('previewArea');
+        const cropX = document.getElementById('cropX');
+        const cropY = document.getElementById('cropY');
+        const cropWidth = document.getElementById('cropWidth');
+        const cropHeight = document.getElementById('cropHeight');
+        const previewBtn = document.getElementById('previewBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+
+        setupDragDrop(dropZone, handleFile);
+        setupFileInput('fileInput', handleFile);
+
+        function handleFile(file) {
+            loadImage(file).then(img => {
+                currentImage = img;
+                cropCanvas = document.getElementById('cropCanvas');
+                ctx = cropCanvas.getContext('2d');
+                
+                const maxWidth = 800;
+                const scale = Math.min(1, maxWidth / img.width);
+                cropCanvas.width = img.width * scale;
+                cropCanvas.height = img.height * scale;
+                
+                ctx.drawImage(img, 0, 0, cropCanvas.width, cropCanvas.height);
+                
+                cropX.value = 0;
+                cropY.value = 0;
+                cropWidth.value = Math.round(cropCanvas.width / 2);
+                cropHeight.value = Math.round(cropCanvas.height / 2);
+                
+                dropZone.style.display = 'none';
+                cropArea.style.display = 'block';
+                previewArea.style.display = 'none';
+                
+                setupCropSelection();
+            }).catch(err => {
+                alert('加载图片失败，请重试');
+            });
+        }
+
+        function setupCropSelection() {
+            cropCanvas.addEventListener('mousedown', startDrag);
+            cropCanvas.addEventListener('mousemove', drag);
+            cropCanvas.addEventListener('mouseup', endDrag);
+            cropCanvas.addEventListener('mouseleave', endDrag);
+            
+            cropCanvas.addEventListener('touchstart', startDrag);
+            cropCanvas.addEventListener('touchmove', drag);
+            cropCanvas.addEventListener('touchend', endDrag);
+        }
+
+        function startDrag(e) {
+            e.preventDefault();
+            isDragging = true;
+            const rect = cropCanvas.getBoundingClientRect();
+            const clientX = e.clientX || e.touches[0].clientX;
+            const clientY = e.clientY || e.touches[0].clientY;
+            startX = clientX - rect.left;
+            startY = clientY - rect.top;
+        }
+
+        function drag(e) {
+            if (!isDragging) return;
+            e.preventDefault();
+            
+            const rect = cropCanvas.getBoundingClientRect();
+            const clientX = e.clientX || e.touches[0].clientX;
+            const clientY = e.clientY || e.touches[0].clientY;
+            const currentX = clientX - rect.left;
+            const currentY = clientY - rect.top;
+            
+            const x = Math.min(startX, currentX);
+            const y = Math.min(startY, currentY);
+            const width = Math.abs(currentX - startX);
+            const height = Math.abs(currentY - startY);
+            
+            cropX.value = Math.round(x);
+            cropY.value = Math.round(y);
+            cropWidth.value = Math.round(width);
+            cropHeight.value = Math.round(height);
+            
+            drawCropBox();
+        }
+
+        function endDrag() {
+            isDragging = false;
+        }
+
+        function drawCropBox() {
+            ctx.drawImage(currentImage, 0, 0, cropCanvas.width, cropCanvas.height);
+            
+            ctx.strokeStyle = '#2563eb';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.strokeRect(
+                parseInt(cropX.value),
+                parseInt(cropY.value),
+                parseInt(cropWidth.value),
+                parseInt(cropHeight.value)
+            );
+            ctx.setLineDash([]);
+        }
+
+        previewBtn.addEventListener('click', () => {
+            if (!currentImage) return;
+            
+            const x = parseInt(cropX.value);
+            const y = parseInt(cropY.value);
+            const width = parseInt(cropWidth.value);
+            const height = parseInt(cropHeight.value);
+            
+            if (width <= 0 || height <= 0) {
+                alert('请选择有效的裁剪区域');
+                return;
+            }
+            
+            const scaleX = currentImage.width / cropCanvas.width;
+            const scaleY = currentImage.height / cropCanvas.height;
+            
+            croppedCanvas = cropImage(
+                currentImage,
+                x * scaleX,
+                y * scaleY,
+                width * scaleX,
+                height * scaleY
+            );
+            
+            updatePreview(croppedCanvas.toDataURL(), 'preview');
+            previewArea.style.display = 'block';
+        });
+
+        downloadBtn.addEventListener('click', () => {
+            if (croppedCanvas) {
+                downloadImage(croppedCanvas, 'cropped-image.png');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="免费在线图片背景去除工具 - 预览版背景去除工具，快速抠图。无需注册，移动端完美适配。">
+    <meta name="keywords" content="背景去除,抠图,去背景,在线抠图,图片去背景">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://jinqizi.eu.cc/remove-bg.html">
+    <title>免费在线图片背景去除 - 快速抠图 | 无需注册</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="index.html" class="logo">🖼️ 图片工具站</a>
+                <nav>
+                    <ul>
+                        <li><a href="index.html">首页</a></li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <div class="tool-page">
+                <a href="index.html" class="back-link">← 返回首页</a>
+                <div class="tool-header">
+                    <h1>图片背景去除工具</h1>
+                    <p>预览版背景去除工具，快速抠图</p>
+                    <p style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 0.5rem;">提示：此工具适合去除纯色背景，复杂背景建议使用专业工具</p>
+                </div>
+
+                <div class="upload-area" id="dropZone">
+                    <div class="upload-icon">📤</div>
+                    <p class="upload-text">拖拽图片到这里或点击上传</p>
+                    <input type="file" id="fileInput" class="file-input" accept="image/*">
+                    <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">选择图片</button>
+                </div>
+
+                <div class="control-group" id="controls" style="display: none;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div>
+                            <label class="control-label">容差值</label>
+                            <input type="range" id="tolerance" class="control-range" min="0" max="100" value="30">
+                            <span id="toleranceValue">30</span>
+                        </div>
+                        <div>
+                            <label class="control-label">背景颜色</label>
+                            <input type="color" id="bgColor" class="control-input" value="#ffffff" style="height: 50px;">
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 1rem;">
+                        <label class="control-label">操作说明</label>
+                        <p style="font-size: 0.9rem; color: var(--text-secondary);">点击图片上的背景区域，系统将自动去除相似颜色</p>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                        <button class="btn btn-secondary" id="resetBtn">重置</button>
+                        <button class="btn btn-primary" id="applyBtn">应用去除</button>
+                    </div>
+                </div>
+
+                <div class="preview-area" id="previewArea" style="display: none;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div>
+                            <h4 style="margin-bottom: 0.5rem;">原始图片</h4>
+                            <canvas id="originalCanvas" style="max-width: 100%; border: 1px solid var(--border-color); cursor: crosshair;"></canvas>
+                        </div>
+                        <div>
+                            <h4 style="margin-bottom: 0.5rem;">去除背景后</h4>
+                            <canvas id="resultCanvas" style="max-width: 100%; border: 1px solid var(--border-color);"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="result-area" id="resultArea">
+                    <p class="result-title">背景去除完成！</p>
+                    <button class="btn btn-success" id="downloadBtn">下载图片</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 图片工具站 - 免费在线图片背景去除工具</p>
+        </div>
+    </footer>
+
+    <script src="js/utils.js"></script>
+    <script>
+        let currentImage = null;
+        let originalCanvas = null;
+        let resultCanvas = null;
+        let originalCtx = null;
+        let resultCtx = null;
+        let targetColor = null;
+        let processedCanvas = null;
+
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const controls = document.getElementById('controls');
+        const previewArea = document.getElementById('previewArea');
+        const tolerance = document.getElementById('tolerance');
+        const toleranceValue = document.getElementById('toleranceValue');
+        const bgColor = document.getElementById('bgColor');
+        const resetBtn = document.getElementById('resetBtn');
+        const applyBtn = document.getElementById('applyBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+
+        setupDragDrop(dropZone, handleFile);
+        setupFileInput('fileInput', handleFile);
+
+        tolerance.addEventListener('input', (e) => {
+            toleranceValue.textContent = e.target.value;
+        });
+
+        function handleFile(file) {
+            loadImage(file).then(img => {
+                currentImage = img;
+                originalCanvas = document.getElementById('originalCanvas');
+                resultCanvas = document.getElementById('resultCanvas');
+                originalCtx = originalCanvas.getContext('2d');
+                resultCtx = resultCanvas.getContext('2d');
+                
+                const maxWidth = 400;
+                const scale = Math.min(1, maxWidth / img.width);
+                originalCanvas.width = img.width * scale;
+                originalCanvas.height = img.height * scale;
+                resultCanvas.width = img.width * scale;
+                resultCanvas.height = img.height * scale;
+                
+                originalCtx.drawImage(img, 0, 0, originalCanvas.width, originalCanvas.height);
+                resultCtx.drawImage(img, 0, 0, resultCanvas.width, resultCanvas.height);
+                
+                targetColor = null;
+                
+                originalCanvas.addEventListener('click', pickColor);
+                
+                dropZone.style.display = 'none';
+                controls.style.display = 'block';
+                previewArea.style.display = 'block';
+                hideResult();
+            }).catch(err => {
+                alert('加载图片失败，请重试');
+            });
+        }
+
+        function pickColor(e) {
+            const rect = originalCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            const pixel = originalCtx.getImageData(x, y, 1, 1).data;
+            targetColor = {
+                r: pixel[0],
+                g: pixel[1],
+                b: pixel[2]
+            };
+            
+            bgColor.value = `#${targetColor.r.toString(16).padStart(2, '0')}${targetColor.g.toString(16).padStart(2, '0')}${targetColor.b.toString(16).padStart(2, '0')}`;
+        }
+
+        function removeBackground() {
+            if (!targetColor) {
+                alert('请先点击图片选择要去除的背景颜色');
+                return;
+            }
+            
+            const imageData = resultCtx.getImageData(0, 0, resultCanvas.width, resultCanvas.height);
+            const data = imageData.data;
+            const tol = parseInt(tolerance.value);
+            
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
+                
+                const diff = Math.sqrt(
+                    Math.pow(r - targetColor.r, 2) +
+                    Math.pow(g - targetColor.g, 2) +
+                    Math.pow(b - targetColor.b, 2)
+                );
+                
+                if (diff < tol * 4.4) {
+                    data[i + 3] = 0;
+                }
+            }
+            
+            resultCtx.putImageData(imageData, 0, 0);
+            processedCanvas = resultCanvas;
+            showResult('背景去除完成！');
+        }
+
+        resetBtn.addEventListener('click', () => {
+            if (currentImage) {
+                originalCtx.drawImage(currentImage, 0, 0, originalCanvas.width, originalCanvas.height);
+                resultCtx.drawImage(currentImage, 0, 0, resultCanvas.width, resultCanvas.height);
+                targetColor = null;
+                hideResult();
+            }
+        });
+
+        applyBtn.addEventListener('click', removeBackground);
+
+        downloadBtn.addEventListener('click', () => {
+            if (processedCanvas) {
+                downloadImage(processedCanvas, 'no-background.png');
+            }
+        });
+    </script>
+</body>
+</html>

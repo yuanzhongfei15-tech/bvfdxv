@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="免费在线图片批量重命名工具 - 批量重命名图片文件，提高效率。无需注册，移动端完美适配。">
+    <meta name="keywords" content="图片批量重命名,批量重命名,文件重命名,在线重命名">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://jinqizi.eu.cc/rename.html">
+    <title>免费在线图片批量重命名 - 提高效率 | 无需注册</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="index.html" class="logo">🖼️ 图片工具站</a>
+                <nav>
+                    <ul>
+                        <li><a href="index.html">首页</a></li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <div class="tool-page">
+                <a href="index.html" class="back-link">← 返回首页</a>
+                <div class="tool-header">
+                    <h1>图片批量重命名工具</h1>
+                    <p>批量重命名图片文件，提高效率</p>
+                </div>
+
+                <div class="upload-area" id="dropZone">
+                    <div class="upload-icon">📤</div>
+                    <p class="upload-text">拖拽图片到这里或点击上传</p>
+                    <input type="file" id="fileInput" class="file-input" accept="image/*" multiple>
+                    <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">选择图片</button>
+                </div>
+
+                <div class="control-group" id="controls" style="display: none;">
+                    <div>
+                        <label class="control-label">文件名前缀</label>
+                        <input type="text" id="prefix" class="control-input" placeholder="例如: image" value="image">
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                        <div>
+                            <label class="control-label">起始编号</label>
+                            <input type="number" id="startNum" class="control-input" value="1" min="1">
+                        </div>
+                        <div>
+                            <label class="control-label">编号位数</label>
+                            <input type="number" id="numDigits" class="control-input" value="3" min="1" max="10">
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 1rem;">
+                        <label class="control-label">文件名预览</label>
+                        <div id="previewList" style="background: #f8fafc; padding: 1rem; border-radius: 8px; max-height: 300px; overflow-y: auto;"></div>
+                    </div>
+                    
+                    <button class="btn btn-primary" id="downloadBtn" style="width: 100%; margin-top: 1rem;">下载重命名后的文件</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 图片工具站 - 免费在线图片批量重命名工具</p>
+        </div>
+    </footer>
+
+    <script src="js/utils.js"></script>
+    <script>
+        let files = [];
+
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const controls = document.getElementById('controls');
+        const prefix = document.getElementById('prefix');
+        const startNum = document.getElementById('startNum');
+        const numDigits = document.getElementById('numDigits');
+        const previewList = document.getElementById('previewList');
+        const downloadBtn = document.getElementById('downloadBtn');
+
+        setupDragDrop(dropZone, handleFiles);
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        prefix.addEventListener('input', updatePreview);
+        startNum.addEventListener('input', updatePreview);
+        numDigits.addEventListener('input', updatePreview);
+
+        function handleFiles(selectedFiles) {
+            files = Array.from(selectedFiles).filter(file => file.type.startsWith('image/'));
+            
+            if (files.length > 0) {
+                dropZone.style.display = 'none';
+                controls.style.display = 'block';
+                updatePreview();
+            }
+        }
+
+        function updatePreview() {
+            const p = prefix.value || 'image';
+            const start = parseInt(startNum.value) || 1;
+            const digits = parseInt(numDigits.value) || 3;
+            
+            previewList.innerHTML = '';
+            
+            files.forEach((file, index) => {
+                const num = (start + index).toString().padStart(digits, '0');
+                const ext = file.name.split('.').pop();
+                const newName = `${p}_${num}.${ext}`;
+                
+                const div = document.createElement('div');
+                div.style.cssText = 'display: flex; justify-content: space-between; padding: 0.5rem; border-bottom: 1px solid var(--border-color); font-size: 0.9rem;';
+                div.innerHTML = `
+                    <span style="color: var(--text-secondary);">${file.name}</span>
+                    <span style="color: var(--primary-color);">→ ${newName}</span>
+                `;
+                previewList.appendChild(div);
+            });
+        }
+
+        downloadBtn.addEventListener('click', () => {
+            if (files.length === 0) {
+                alert('请先选择图片');
+                return;
+            }
+            
+            const p = prefix.value || 'image';
+            const start = parseInt(startNum.value) || 1;
+            const digits = parseInt(numDigits.value) || 3;
+            
+            files.forEach((file, index) => {
+                const num = (start + index).toString().padStart(digits, '0');
+                const ext = file.name.split('.').pop();
+                const newName = `${p}_${num}.${ext}`;
+                
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(file);
+                link.download = newName;
+                link.click();
+            });
+        });
+    </script>
+</body>
+</html>

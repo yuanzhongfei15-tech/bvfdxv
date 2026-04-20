@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="免费在线图片圆角生成工具 - 为图片添加圆角效果，美化图片。无需注册，移动端完美适配。">
+    <meta name="keywords" content="圆角生成,图片圆角,圆角效果,在线圆角">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://jinqizi.eu.cc/rounded.html">
+    <title>免费在线图片圆角生成 - 美化图片 | 无需注册</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="index.html" class="logo">🖼️ 图片工具站</a>
+                <nav>
+                    <ul>
+                        <li><a href="index.html">首页</a></li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <div class="tool-page">
+                <a href="index.html" class="back-link">← 返回首页</a>
+                <div class="tool-header">
+                    <h1>图片圆角生成工具</h1>
+                    <p>为图片添加圆角效果，美化图片</p>
+                </div>
+
+                <div class="upload-area" id="dropZone">
+                    <div class="upload-icon">📤</div>
+                    <p class="upload-text">拖拽图片到这里或点击上传</p>
+                    <input type="file" id="fileInput" class="file-input" accept="image/*">
+                    <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">选择图片</button>
+                </div>
+
+                <div class="control-group" id="controls" style="display: none;">
+                    <div>
+                        <label class="control-label">圆角半径: <span id="radiusValue">20</span>px</label>
+                        <input type="range" id="radius" class="control-range" min="0" max="200" value="20">
+                    </div>
+                    
+                    <div style="margin-top: 1.5rem;">
+                        <label class="control-label">快速预设</label>
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-top: 0.5rem;">
+                            <button class="btn btn-secondary" onclick="setRadius(0)">0px</button>
+                            <button class="btn btn-secondary" onclick="setRadius(10)">10px</button>
+                            <button class="btn btn-secondary" onclick="setRadius(20)">20px</button>
+                            <button class="btn btn-secondary" onclick="setRadius(50)">50px</button>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 1.5rem;">
+                        <label class="control-label">背景颜色</label>
+                        <input type="color" id="bgColor" class="control-input" value="#ffffff" style="height: 50px;">
+                        <label style="display: flex; align-items: center; margin-top: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" id="transparentBg" style="margin-right: 0.5rem;">
+                            透明背景
+                        </label>
+                    </div>
+                    
+                    <button class="btn btn-primary" id="applyBtn" style="width: 100%; margin-top: 1.5rem;">应用圆角</button>
+                </div>
+
+                <div class="preview-area" id="previewArea" style="display: none;">
+                    <h3 style="margin-bottom: 1rem;">预览</h3>
+                    <div id="previewContainer" style="display: inline-block; padding: 20px; background: repeating-conic-gradient(#f0f0f0 0% 25%, #ffffff 0% 50%) 50% / 20px 20px;">
+                        <img id="preview" class="preview-image" alt="预览">
+                    </div>
+                </div>
+
+                <div class="result-area" id="resultArea">
+                    <p class="result-title">圆角添加完成！</p>
+                    <button class="btn btn-success" id="downloadBtn">下载图片</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 图片工具站 - 免费在线图片圆角生成工具</p>
+        </div>
+    </footer>
+
+    <script src="js/utils.js"></script>
+    <script>
+        let currentImage = null;
+        let roundedCanvas = null;
+
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const controls = document.getElementById('controls');
+        const previewArea = document.getElementById('previewArea');
+        const radius = document.getElementById('radius');
+        const radiusValue = document.getElementById('radiusValue');
+        const bgColor = document.getElementById('bgColor');
+        const transparentBg = document.getElementById('transparentBg');
+        const applyBtn = document.getElementById('applyBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+
+        setupDragDrop(dropZone, handleFile);
+        setupFileInput('fileInput', handleFile);
+
+        radius.addEventListener('input', (e) => {
+            radiusValue.textContent = e.target.value;
+        });
+
+        function setRadius(value) {
+            radius.value = value;
+            radiusValue.textContent = value;
+        }
+
+        function handleFile(file) {
+            loadImage(file).then(img => {
+                currentImage = img;
+                radius.value = 20;
+                radiusValue.textContent = '20';
+                
+                updatePreview(img.src, 'preview');
+                controls.style.display = 'block';
+                previewArea.style.display = 'block';
+                hideResult();
+            }).catch(err => {
+                alert('加载图片失败，请重试');
+            });
+        }
+
+        function applyRoundedCorners() {
+            if (!currentImage) return;
+            
+            const r = parseInt(radius.value);
+            const isTransparent = transparentBg.checked;
+            
+            const canvas = createCanvas(currentImage.width, currentImage.height);
+            const ctx = canvas.getContext('2d');
+            
+            if (!isTransparent) {
+                ctx.fillStyle = bgColor.value;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+            
+            ctx.beginPath();
+            ctx.moveTo(r, 0);
+            ctx.lineTo(canvas.width - r, 0);
+            ctx.quadraticCurveTo(canvas.width, 0, canvas.width, r);
+            ctx.lineTo(canvas.width, canvas.height - r);
+            ctx.quadraticCurveTo(canvas.width, canvas.height, canvas.width - r, canvas.height);
+            ctx.lineTo(r, canvas.height);
+            ctx.quadraticCurveTo(0, canvas.height, 0, canvas.height - r);
+            ctx.lineTo(0, r);
+            ctx.quadraticCurveTo(0, 0, r, 0);
+            ctx.closePath();
+            
+            ctx.clip();
+            ctx.drawImage(currentImage, 0, 0);
+            
+            roundedCanvas = canvas;
+            updatePreview(canvas.toDataURL(isTransparent ? 'image/png' : 'image/jpeg'), 'preview');
+            showResult('圆角添加完成！');
+        }
+
+        applyBtn.addEventListener('click', applyRoundedCorners);
+
+        downloadBtn.addEventListener('click', () => {
+            if (roundedCanvas) {
+                const isTransparent = transparentBg.checked;
+                downloadImage(roundedCanvas, isTransparent ? 'rounded-image.png' : 'rounded-image.jpg');
+            }
+        });
+    </script>
+</body>
+</html>
