@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://jinqizi.eu.cc/sitemap.xml
+Sitemap: https://haoxiangmu.ccwu.cc/sitemap.xml
